@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-brand-cream text-brand-ocean; }
+  a { @apply text-brand-emerald hover:underline; }
+}
+
+@layer components {
+  .btn-primary { @apply inline-flex items-center px-4 py-2 rounded-xl bg-brand-emerald text-white hover:opacity-90 shadow-soft; }
+  .btn-gold    { @apply inline-flex items-center px-4 py-2 rounded-xl bg-brand-gold text-brand-ocean hover:opacity-90 shadow-soft; }
+  .card        { @apply bg-white rounded-2xl p-5 shadow-soft; }
+  .badge       { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-cream text-brand-ocean; }
+  .sidebar     { @apply bg-brand-ocean text-white w-64 min-h-screen p-4; }
+  .sidebar a   { @apply block px-3 py-2 rounded-lg hover:bg-white/10; }
+  .topbar      { @apply bg-white border-b border-brand-cream/70; }
+  .heading     { @apply text-2xl font-semibold text-brand-ocean; }
+}
