@@ -27,22 +27,59 @@
 
   <div class="grid md:grid-cols-2 gap-4">
     <div>
+      <label class="block text-sm mb-1">Customer Name</label>
+      <input type="text" name="customer_name" class="w-full border rounded-lg px-3 py-2" required>
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Customer Email</label>
+      <input type="email" name="customer_email" class="w-full border rounded-lg px-3 py-2" required>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm mb-1">Customer Phone</label>
+      <input type="text" name="customer_phone" class="w-full border rounded-lg px-3 py-2" placeholder="07xxxxxxxx" required>
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Domain</label>
+      <input type="text" name="domain" class="w-full border rounded-lg px-3 py-2" placeholder="example.com">
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4">
+    <div>
       <label class="block text-sm mb-1">Price (TZS)</label>
       <input type="number" name="price_tzs" class="w-full border rounded-lg px-3 py-2" min="0" required>
     </div>
     <div>
+      <label class="block text-sm mb-1">Currency</label>
+      <input type="text" name="currency" value="TZS" class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
       <label class="block text-sm mb-1">Status</label>
       <select name="status" class="w-full border rounded-lg px-3 py-2" required>
-        @foreach(['pending','paid','failed','active','cancelled'] as $st)
+        @foreach(['pending','paid','failed','active','cancelled','complete','succeeded'] as $st)
           <option value="{{ $st }}">{{ ucfirst($st) }}</option>
         @endforeach
       </select>
     </div>
   </div>
 
-  <div>
-    <label class="block text-sm mb-1">Notes</label>
-    <textarea name="notes" rows="4" class="w-full border rounded-lg px-3 py-2" placeholder="Optional admin notes..."></textarea>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm mb-1">Payment Reference</label>
+      <input type="text" name="payment_ref" class="w-full border rounded-lg px-3 py-2" placeholder="Transaction ID">
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Gateway Provider</label>
+      <select name="gateway_provider" class="w-full border rounded-lg px-3 py-2">
+        <option value="">-- Select Provider --</option>
+        <option value="M-PESA">M-PESA</option>
+        <option value="TIGO-PESA">TIGO-PESA</option>
+        <option value="AIRTEL-MONEY">AIRTEL-MONEY</option>
+      </select>
+    </div>
   </div>
 
   <div class="flex items-center gap-3">

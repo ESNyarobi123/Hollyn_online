@@ -42,6 +42,28 @@ class UserController extends Controller
         return view('admin.users.index', compact('users', 'stats'));
     }
 
+    public function create()
+    {
+        return view('admin.users.create');
+    }
+
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'unique:users,email'],
+            'phone'    => ['nullable', 'string', 'max:30'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role'     => ['required', 'in:user,admin'],
+        ]);
+
+        $data['password'] = Hash::make($data['password']);
+        
+        $user = User::create($data);
+
+        return redirect()->route('admin.users.show', $user)->with('ok', 'User created successfully.');
+    }
+
     public function show(User $user)
     {
         $user->load(['orders.plan', 'orders.service']);
@@ -53,6 +75,33 @@ class UserController extends Controller
         })->with(['plan', 'order'])->latest('id')->get();
         
         return view('admin.users.show', compact('user', 'services'));
+    }
+
+    public function edit(User $user)
+    {
+        return view('admin.users.edit', compact('user'));
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'unique:users,email,' . $user->id],
+            'phone'    => ['nullable', 'string', 'max:30'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'role'     => ['required', 'in:user,admin'],
+        ]);
+
+        // Only update password if provided
+        if (!empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+        
+        $user->update($data);
+
+        return redirect()->route('admin.users.show', $user)->with('ok', 'User updated successfully.');
     }
 
     public function destroy(User $user)

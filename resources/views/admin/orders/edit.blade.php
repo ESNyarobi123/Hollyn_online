@@ -26,22 +26,59 @@
 
   <div class="grid md:grid-cols-2 gap-4">
     <div>
+      <label class="block text-sm mb-1">Customer Name</label>
+      <input type="text" name="customer_name" value="{{ old('customer_name',$order->customer_name) }}" class="w-full border rounded-lg px-3 py-2" required>
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Customer Email</label>
+      <input type="email" name="customer_email" value="{{ old('customer_email',$order->customer_email) }}" class="w-full border rounded-lg px-3 py-2" required>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm mb-1">Customer Phone</label>
+      <input type="text" name="customer_phone" value="{{ old('customer_phone',$order->customer_phone) }}" class="w-full border rounded-lg px-3 py-2" required>
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Domain</label>
+      <input type="text" name="domain" value="{{ old('domain',$order->domain) }}" class="w-full border rounded-lg px-3 py-2">
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4">
+    <div>
       <label class="block text-sm mb-1">Price (TZS)</label>
       <input type="number" name="price_tzs" value="{{ old('price_tzs',$order->price_tzs) }}" class="w-full border rounded-lg px-3 py-2" min="0" required>
     </div>
     <div>
+      <label class="block text-sm mb-1">Currency</label>
+      <input type="text" name="currency" value="{{ old('currency',$order->currency) }}" class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
       <label class="block text-sm mb-1">Status</label>
       <select name="status" class="w-full border rounded-lg px-3 py-2">
-        @foreach(['pending','paid','failed','active','cancelled'] as $st)
+        @foreach(['pending','paid','failed','active','cancelled','complete','succeeded'] as $st)
           <option value="{{ $st }}" @selected($order->status===$st)>{{ ucfirst($st) }}</option>
         @endforeach
       </select>
     </div>
   </div>
 
-  <div>
-    <label class="block text-sm mb-1">Notes</label>
-    <textarea name="notes" rows="4" class="w-full border rounded-lg px-3 py-2" placeholder="Optional admin notes...">{{ old('notes',$order->notes) }}</textarea>
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm mb-1">Payment Reference</label>
+      <input type="text" name="payment_ref" value="{{ old('payment_ref',$order->payment_ref) }}" class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm mb-1">Gateway Provider</label>
+      <select name="gateway_provider" class="w-full border rounded-lg px-3 py-2">
+        <option value="">-- Select Provider --</option>
+        @foreach(['M-PESA','TIGO-PESA','AIRTEL-MONEY'] as $gw)
+          <option value="{{ $gw }}" @selected($order->gateway_provider===$gw)>{{ $gw }}</option>
+        @endforeach
+      </select>
+    </div>
   </div>
 
   <div class="flex items-center gap-3">

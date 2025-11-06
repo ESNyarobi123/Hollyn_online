@@ -66,13 +66,16 @@ class Order extends Model
         self::STATUS_FAILED, self::STATUS_CANCELLED, self::STATUS_CANCELED, self::STATUS_COMPLETE, self::STATUS_SUCCEEDED,
     ];
 
-    /** @var array<int,string> */
+    /** @var array<int,string> - Allow all fields for admin control */
     protected $fillable = [
         'user_id','plan_id','order_uuid','customer_name','customer_email',
         'customer_phone','payer_phone','domain','price_tzs','currency','status','payment_ref',
         // idempotency/gateway
         'gateway_order_id','gateway_provider','gateway_meta',
     ];
+    
+    // Empty guarded allows mass assignment of all fields
+    protected $guarded = [];
 
     /** @var array<string,string> */
     protected $casts = [

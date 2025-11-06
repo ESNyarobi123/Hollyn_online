@@ -12,6 +12,37 @@ use Illuminate\Support\Facades\Mail;
 class ServiceController extends Controller
 {
     /**
+     * GET /admin/services/create
+     * Create new service form
+     */
+    public function create()
+    {
+        $orders = \App\Models\Order::with('user:id,name')->whereIn('status', ['paid','active'])->latest('id')->get();
+        $plans = \App\Models\Plan::orderBy('name')->get(['id','name','slug']);
+        return view('admin.services.create', compact('orders', 'plans'));
+    }
+
+    /**
+     * POST /admin/services
+     * Store new service
+     */
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'order_id'       => ['required', 'exists:orders,id'],
+            'plan_slug'      => ['required', 'exists:plans,slug'],
+            'domain'         => ['required', 'string', 'max:255'],
+            'webuzo_username' => ['nullable', 'string', 'max:60'],
+            'enduser_url'    => ['nullable', 'url', 'max:255'],
+            'status'         => ['required', 'in:requested,provisioning,active,failed,suspended,cancelled'],
+        ]);
+
+        $service = Service::create($data);
+
+        return redirect()->route('admin.services.show', $service)->with('ok', 'Service created successfully.');
+    }
+
+    /**
      * GET /admin/services
      * Lists services with filters + KPIs.
      */

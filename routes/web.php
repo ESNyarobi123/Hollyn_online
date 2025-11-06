@@ -219,9 +219,8 @@ Route::middleware(['auth', IsAdmin::class])
             ->parameters(['orders' => 'order'])
             ->where(['order' => '[0-9]+']);
 
-        // Services: limited CRUD (no create/store)
+        // Services: full CRUD
         Route::resource('services', AdminService::class)
-            ->only(['index', 'show', 'edit', 'update', 'destroy'])
             ->parameters(['services' => 'service'])
             ->where(['service' => '[0-9]+']);
 
