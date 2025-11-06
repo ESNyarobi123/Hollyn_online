@@ -1,4 +1,4 @@
-@extends('admin.layout')
+@extends('layouts.admin')
 @section('title','Create Order')
 @section('content')
 <h1 class="text-2xl font-semibold mb-6">Create Order</h1>
