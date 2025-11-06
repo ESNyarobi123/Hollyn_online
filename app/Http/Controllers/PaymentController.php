@@ -139,6 +139,8 @@ class PaymentController extends Controller
      */
     public function pollStatus(Order $order, ZenoPayClient $zeno)
     {
+        \Log::info('Polling payment status', ['order_id' => $order->id, 'current_status' => $order->status]);
+
         // Return current order status if already terminal
         if (in_array($order->status, ['paid', 'active', 'complete', 'succeeded', 'failed', 'cancelled'], true)) {
             return response()->json([
@@ -152,17 +154,36 @@ class PaymentController extends Controller
         // Check with ZenoPay if we have gateway_order_id
         if (!empty($order->gateway_order_id)) {
             try {
+                \Log::info('Checking ZenoPay status', ['gateway_order_id' => $order->gateway_order_id]);
+                
                 $statusResp = $zeno->status($order->gateway_order_id);
                 
-                // Extract status from ZenoPay response
-                $zenoStatus = strtolower((string) (Arr::get($statusResp, 'state') ?? Arr::get($statusResp, 'status', 'pending')));
+                \Log::info('ZenoPay response', ['response' => $statusResp]);
                 
-                // Update order based on ZenoPay status
-                if (in_array($zenoStatus, ['paid', 'success', 'completed', 'active'], true)) {
+                // Extract status from ZenoPay response - try multiple possible keys
+                $zenoStatus = strtolower((string) (
+                    Arr::get($statusResp, 'data.status') ?? 
+                    Arr::get($statusResp, 'data.state') ?? 
+                    Arr::get($statusResp, 'status') ?? 
+                    Arr::get($statusResp, 'state') ?? 
+                    Arr::get($statusResp, 'payment_status') ??
+                    'pending'
+                ));
+                
+                \Log::info('Extracted status', ['zeno_status' => $zenoStatus]);
+                
+                // Update order based on ZenoPay status - check more variations
+                if (in_array($zenoStatus, ['paid', 'success', 'successful', 'completed', 'complete', 'active', 'approved'], true)) {
                     $order->status = 'paid';
-                    $order->payment_ref = Arr::get($statusResp, 'transaction_id') ?? Arr::get($statusResp, 'reference');
-                    $order->gateway_meta = $this->mergeMeta($order->gateway_meta, ['status_check' => $statusResp]);
+                    $order->payment_ref = Arr::get($statusResp, 'data.transaction_id') 
+                        ?? Arr::get($statusResp, 'transaction_id') 
+                        ?? Arr::get($statusResp, 'data.reference')
+                        ?? Arr::get($statusResp, 'reference')
+                        ?? Arr::get($statusResp, 'data.transaction_reference');
+                    $order->gateway_meta = $this->mergeMeta($order->gateway_meta, ['status_check' => $statusResp, 'checked_at' => now()->toIso8601String()]);
                     $order->save();
+                    
+                    \Log::info('Order marked as paid', ['order_id' => $order->id, 'payment_ref' => $order->payment_ref]);
                     
                     return response()->json([
                         'status' => 'paid',
@@ -172,10 +193,12 @@ class PaymentController extends Controller
                         'payment_ref' => $order->payment_ref,
                     ]);
                     
-                } elseif (in_array($zenoStatus, ['failed', 'cancelled', 'expired'], true)) {
+                } elseif (in_array($zenoStatus, ['failed', 'cancelled', 'canceled', 'expired', 'rejected'], true)) {
                     $order->status = 'failed';
-                    $order->gateway_meta = $this->mergeMeta($order->gateway_meta, ['status_check' => $statusResp]);
+                    $order->gateway_meta = $this->mergeMeta($order->gateway_meta, ['status_check' => $statusResp, 'checked_at' => now()->toIso8601String()]);
                     $order->save();
+                    
+                    \Log::warning('Order marked as failed', ['order_id' => $order->id, 'zeno_status' => $zenoStatus]);
                     
                     return response()->json([
                         'status' => 'failed',
@@ -186,8 +209,15 @@ class PaymentController extends Controller
                 }
                 
             } catch (\Throwable $e) {
+                \Log::error('ZenoPay status check failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 // Continue with current status if API call fails
             }
+        } else {
+            \Log::warning('No gateway_order_id', ['order_id' => $order->id]);
         }
 
         // Return pending status

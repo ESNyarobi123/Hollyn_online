@@ -98,4 +98,75 @@ class OrderController extends Controller
         $order->delete();
         return redirect()->route('admin.orders.index')->with('ok','Order deleted.');
     }
+
+    /**
+     * Check payment status from ZenoPay and update order
+     */
+    public function checkStatus(Order $order, \App\Services\ZenoPayClient $zeno)
+    {
+        if (!$order->gateway_order_id) {
+            return back()->withErrors('Order has no gateway_order_id to check.');
+        }
+
+        try {
+            $statusResp = $zeno->status($order->gateway_order_id);
+            
+            // Extract status from ZenoPay response
+            $zenoStatus = strtolower((string) (\Illuminate\Support\Arr::get($statusResp, 'state') ?? \Illuminate\Support\Arr::get($statusResp, 'status', 'pending')));
+            
+            // Update order based on ZenoPay status
+            if (in_array($zenoStatus, ['paid', 'success', 'completed', 'active'], true)) {
+                $order->status = 'paid';
+                $order->payment_ref = \Illuminate\Support\Arr::get($statusResp, 'transaction_id') ?? \Illuminate\Support\Arr::get($statusResp, 'reference') ?? $order->payment_ref;
+                $order->gateway_meta = $this->mergeGatewayMeta($order->gateway_meta, ['admin_check' => $statusResp, 'checked_at' => now()]);
+                $order->save();
+                
+                return back()->with('ok', '✅ Payment confirmed! Order marked as PAID.');
+                
+            } elseif (in_array($zenoStatus, ['failed', 'cancelled', 'expired'], true)) {
+                $order->status = 'failed';
+                $order->gateway_meta = $this->mergeGatewayMeta($order->gateway_meta, ['admin_check' => $statusResp, 'checked_at' => now()]);
+                $order->save();
+                
+                return back()->with('ok', '❌ Payment FAILED according to ZenoPay.');
+                
+            } else {
+                return back()->with('ok', '⏳ Payment still PENDING. Status: ' . $zenoStatus);
+            }
+            
+        } catch (\Throwable $e) {
+            return back()->withErrors('Error checking status: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Manually mark order as paid (admin override)
+     */
+    public function markPaid(Order $order)
+    {
+        if ($order->status === 'paid') {
+            return back()->with('ok', 'Order is already marked as PAID.');
+        }
+
+        $order->status = 'paid';
+        $order->payment_ref = $order->payment_ref ?? 'ADMIN-' . strtoupper(\Illuminate\Support\Str::random(8));
+        $order->gateway_meta = $this->mergeGatewayMeta($order->gateway_meta, [
+            'manual_override' => true,
+            'marked_by' => \Illuminate\Support\Facades\Auth::id(),
+            'marked_at' => now(),
+        ]);
+        $order->save();
+
+        return back()->with('ok', '✅ Order manually marked as PAID!');
+    }
+
+    /**
+     * Helper to merge gateway meta
+     */
+    protected function mergeGatewayMeta($current, array $new): array
+    {
+        $curr = is_array($current) ? $current : (is_string($current) ? json_decode($current, true) : []);
+        if (!is_array($curr)) $curr = [];
+        return array_merge($curr, $new);
+    }
 }

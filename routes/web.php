@@ -218,6 +218,15 @@ Route::middleware(['auth', IsAdmin::class])
         Route::resource('orders', AdminOrder::class)
             ->parameters(['orders' => 'order'])
             ->where(['order' => '[0-9]+']);
+        
+        // Order quick actions
+        Route::post('orders/{order}/check-status', [AdminOrder::class, 'checkStatus'])
+            ->whereNumber('order')
+            ->name('orders.check-status');
+        
+        Route::post('orders/{order}/mark-paid', [AdminOrder::class, 'markPaid'])
+            ->whereNumber('order')
+            ->name('orders.mark-paid');
 
         // Services: full CRUD
         Route::resource('services', AdminService::class)

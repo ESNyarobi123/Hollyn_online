@@ -54,6 +54,22 @@
                     <a href="{{ route('admin.orders.edit', $order) }}" class="px-6 py-3 bg-white text-purple-600 rounded-xl font-semibold hover:shadow-lg transition btn-modern">
                         <i class="fas fa-edit mr-2"></i> Edit Order
                     </a>
+                    
+                    @if($order->status === 'pending' && $order->gateway_order_id)
+                        <form action="{{ route('admin.orders.check-status', $order) }}" method="POST" style="display: inline;">
+                            @csrf
+                            <button type="submit" class="px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 hover:shadow-lg transition btn-modern">
+                                <i class="fas fa-sync mr-2"></i> Check Payment Status
+                            </button>
+                        </form>
+                        
+                        <form action="{{ route('admin.orders.mark-paid', $order) }}" method="POST" style="display: inline;" onsubmit="return confirm('Mark this order as PAID? This action will update the order status.');">
+                            @csrf
+                            <button type="submit" class="px-6 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 hover:shadow-lg transition btn-modern">
+                                <i class="fas fa-check-circle mr-2"></i> Mark as Paid
+                            </button>
+                        </form>
+                    @endif
                 </div>
             </div>
         </div>

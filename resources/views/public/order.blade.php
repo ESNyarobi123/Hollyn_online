@@ -92,6 +92,11 @@
 
     <!-- Actions -->
     <div class="mt-6 flex gap-3">
+      @if($order->status === 'pending')
+        <button onclick="checkStatusNow()" id="check-btn" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
+          🔄 Angalia Status Ya Malipo
+        </button>
+      @endif
       @auth
         <a href="{{ route('dashboard') }}" class="btn-primary">
           📊 Dashboard Yangu
@@ -113,8 +118,52 @@
     const maxPolls = 60; // Poll for 5 minutes (60 × 5s = 5min)
     const pollDelay = 5000; // Check every 5 seconds
     
+    function updateUI(data) {
+      const statusElement = document.getElementById('order-status');
+      const messageElement = document.getElementById('status-message');
+      const containerElement = document.getElementById('status-container');
+      const iconElement = document.getElementById('status-icon');
+      
+      if (data.is_paid) {
+        // Payment successful!
+        statusElement.textContent = 'PAID ✅';
+        messageElement.innerHTML = '<span class="text-green-800">✅ Malipo yamefanikiwa! Tunapanga huduma yako...</span>';
+        containerElement.style.backgroundColor = '#D1FAE5';
+        containerElement.style.borderColor = '#10B981';
+        iconElement.innerHTML = '<svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+        
+        if (pollInterval) clearInterval(pollInterval);
+        
+        // Reload page after 2 seconds to show service
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } else if (data.is_terminal && !data.is_paid) {
+        // Payment failed
+        statusElement.textContent = 'FAILED ❌';
+        messageElement.innerHTML = '<span class="text-red-800">❌ Malipo yameshindikana. Jaribu tena.</span>';
+        containerElement.style.backgroundColor = '#FEE2E2';
+        containerElement.style.borderColor = '#EF4444';
+        iconElement.innerHTML = '<svg class="h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+        
+        if (pollInterval) clearInterval(pollInterval);
+      } else {
+        // Still pending
+        statusElement.textContent = 'PENDING ⏳';
+        messageElement.innerHTML = '<span class="text-yellow-800">⏳ Tunasubiri uthibitisho wa malipo...</span>';
+      }
+    }
+    
     function checkPaymentStatus() {
       pollCount++;
+      
+      // Disable check button while checking
+      const btn = document.getElementById('check-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Inaangalia...';
+      }
       
       fetch('{{ route("pay.status", $order->id) }}', {
         method: 'GET',
@@ -123,52 +172,50 @@
           'X-Requested-With': 'XMLHttpRequest'
         }
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
       .then(data => {
-        console.log('Payment status:', data);
+        console.log('Payment status check #' + pollCount + ':', data);
+        updateUI(data);
         
-        // Update status display
-        const statusElement = document.getElementById('order-status');
-        const messageElement = document.getElementById('status-message');
-        const containerElement = document.getElementById('status-container');
-        const iconElement = document.getElementById('status-icon');
-        
-        if (data.is_paid) {
-          // Payment successful!
-          statusElement.textContent = 'PAID ✅';
-          messageElement.innerHTML = '<span class="text-green-800">✅ Malipo yamefanikiwa! Tunapanga huduma yako...</span>';
-          containerElement.style.backgroundColor = '#D1FAE5';
-          containerElement.style.borderColor = '#10B981';
-          iconElement.innerHTML = '<svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-          
-          clearInterval(pollInterval);
-          
-          // Reload page after 3 seconds to show service
-          setTimeout(() => {
-            window.location.reload();
-          }, 3000);
-          
-        } else if (data.is_terminal && !data.is_paid) {
-          // Payment failed
-          statusElement.textContent = 'FAILED ❌';
-          messageElement.innerHTML = '<span class="text-red-800">❌ Malipo yameshindikana. Jaribu tena.</span>';
-          containerElement.style.backgroundColor = '#FEE2E2';
-          containerElement.style.borderColor = '#EF4444';
-          iconElement.innerHTML = '<svg class="h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-          
-          clearInterval(pollInterval);
+        // Re-enable button
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🔄 Angalia Status Ya Malipo';
         }
         
         // Stop polling after max attempts
-        if (pollCount >= maxPolls) {
-          clearInterval(pollInterval);
-          messageElement.innerHTML = '<span class="text-yellow-800">⏰ Imeisha muda. Refresh ukagundua status.</span>';
+        if (pollCount >= maxPolls && !data.is_terminal) {
+          if (pollInterval) clearInterval(pollInterval);
+          document.getElementById('status-message').innerHTML = 
+            '<span class="text-yellow-800">⏰ Tumechelewa kupata response. Bofya button ya "Angalia Status" ukagundua.</span>';
         }
       })
       .catch(error => {
         console.error('Error checking status:', error);
+        
+        // Re-enable button
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🔄 Angalia Status Ya Malipo';
+        }
+        
+        // Don't stop polling on error, just log it
+        if (pollCount >= maxPolls && pollInterval) {
+          clearInterval(pollInterval);
+        }
       });
     }
+    
+    // Manual check function (for button)
+    window.checkStatusNow = function() {
+      console.log('Manual status check triggered');
+      checkPaymentStatus();
+    };
     
     // Start polling immediately, then every 5 seconds
     checkPaymentStatus();
@@ -176,7 +223,7 @@
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-      clearInterval(pollInterval);
+      if (pollInterval) clearInterval(pollInterval);
     });
   })();
 </script>
