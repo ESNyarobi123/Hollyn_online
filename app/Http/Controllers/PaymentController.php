@@ -134,6 +134,71 @@ class PaymentController extends Controller
         };
     }
 
+    /**
+     * Poll payment status (for frontend polling)
+     */
+    public function pollStatus(Order $order, ZenoPayClient $zeno)
+    {
+        // Return current order status if already terminal
+        if (in_array($order->status, ['paid', 'active', 'complete', 'succeeded', 'failed', 'cancelled'], true)) {
+            return response()->json([
+                'status' => $order->status,
+                'is_paid' => in_array($order->status, ['paid', 'active', 'complete', 'succeeded'], true),
+                'is_terminal' => true,
+                'message' => 'Payment ' . $order->status,
+            ]);
+        }
+
+        // Check with ZenoPay if we have gateway_order_id
+        if (!empty($order->gateway_order_id)) {
+            try {
+                $statusResp = $zeno->status($order->gateway_order_id);
+                
+                // Extract status from ZenoPay response
+                $zenoStatus = strtolower((string) (Arr::get($statusResp, 'state') ?? Arr::get($statusResp, 'status', 'pending')));
+                
+                // Update order based on ZenoPay status
+                if (in_array($zenoStatus, ['paid', 'success', 'completed', 'active'], true)) {
+                    $order->status = 'paid';
+                    $order->payment_ref = Arr::get($statusResp, 'transaction_id') ?? Arr::get($statusResp, 'reference');
+                    $order->gateway_meta = $this->mergeMeta($order->gateway_meta, ['status_check' => $statusResp]);
+                    $order->save();
+                    
+                    return response()->json([
+                        'status' => 'paid',
+                        'is_paid' => true,
+                        'is_terminal' => true,
+                        'message' => 'Payment confirmed!',
+                        'payment_ref' => $order->payment_ref,
+                    ]);
+                    
+                } elseif (in_array($zenoStatus, ['failed', 'cancelled', 'expired'], true)) {
+                    $order->status = 'failed';
+                    $order->gateway_meta = $this->mergeMeta($order->gateway_meta, ['status_check' => $statusResp]);
+                    $order->save();
+                    
+                    return response()->json([
+                        'status' => 'failed',
+                        'is_paid' => false,
+                        'is_terminal' => true,
+                        'message' => 'Payment failed',
+                    ]);
+                }
+                
+            } catch (\Throwable $e) {
+                // Continue with current status if API call fails
+            }
+        }
+
+        // Return pending status
+        return response()->json([
+            'status' => $order->status,
+            'is_paid' => false,
+            'is_terminal' => false,
+            'message' => 'Checking payment status...',
+        ]);
+    }
+
     private function mergeMeta($current, array $new): array
     {
         $curr = is_array($current) ? $current : (is_string($current) ? json_decode($current, true) : []);
