@@ -38,11 +38,19 @@ class CheckoutController extends Controller
             'customer_email' => ['required','email'],
             'customer_phone' => ['required','string','max:30'],
             'domain'         => ['nullable','string','max:191'],
+            'duration_months'=> ['required','integer','min:1','max:36'],
+            'notes'          => ['nullable','string','max:500'],
         ]);
 
         $plan = Plan::whereKey($data['plan_id'])
             ->where('is_active', true)
             ->firstOrFail();
+        
+        // Calculate pricing with discount
+        $durationMonths = (int) $data['duration_months'];
+        $baseMonthly = $plan->price_tzs; // Treat plan price as monthly base
+        $discount = Order::calculateDiscountForDuration($durationMonths);
+        $totalPrice = Order::calculateTotalPrice($baseMonthly, $durationMonths);
 
         // Normalize → local display (07/06xxxxxxxx)
         $localPhone = $this->normalizeTzPhone($data['customer_phone']);
@@ -68,19 +76,23 @@ class CheckoutController extends Controller
             return redirect()->route('pay.start', ['order' => $existing->id]);
         }
 
-        $order = DB::transaction(function () use ($userId, $plan, $data, $localPhone, $payerMsisdn) {
+        $order = DB::transaction(function () use ($userId, $plan, $data, $localPhone, $payerMsisdn, $durationMonths, $baseMonthly, $totalPrice, $discount) {
             return Order::create([
-                'user_id'        => $userId,
-                'plan_id'        => $plan->id,
-                'order_uuid'     => (string) Str::uuid(),
-                'customer_name'  => $data['customer_name'],
-                'customer_email' => $data['customer_email'],
-                'customer_phone' => $localPhone,     // 07/06xxxxxxxx (kwa display na mawasiliano)
-                'payer_phone'    => $payerMsisdn,    // 2556/2557xxxxxxxx (kwa malipo)
-                'domain'         => $data['domain'] ? strtolower(trim($data['domain'])) : null,
-                'price_tzs'      => $plan->price_tzs,
-                'currency'       => env('APP_CURRENCY','TZS'),
-                'status'         => 'pending',
+                'user_id'            => $userId,
+                'plan_id'            => $plan->id,
+                'order_uuid'         => (string) Str::uuid(),
+                'customer_name'      => $data['customer_name'],
+                'customer_email'     => $data['customer_email'],
+                'customer_phone'     => $localPhone,     // 07/06xxxxxxxx (kwa display na mawasiliano)
+                'payer_phone'        => $payerMsisdn,    // 2556/2557xxxxxxxx (kwa malipo)
+                'domain'             => $data['domain'] ? strtolower(trim($data['domain'])) : null,
+                'notes'              => $data['notes'] ?? null,
+                'duration_months'    => $durationMonths,
+                'base_price_monthly' => $baseMonthly,
+                'discount_percentage'=> $discount,
+                'price_tzs'          => $totalPrice,     // Total price after discount
+                'currency'           => env('APP_CURRENCY','TZS'),
+                'status'             => 'pending',
             ]);
         });
 

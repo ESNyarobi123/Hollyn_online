@@ -70,6 +70,8 @@ class Order extends Model
     protected $fillable = [
         'user_id','plan_id','order_uuid','customer_name','customer_email',
         'customer_phone','payer_phone','domain','price_tzs','currency','status','payment_ref',
+        // subscription duration
+        'duration_months','base_price_monthly','discount_percentage','notes',
         // idempotency/gateway
         'gateway_order_id','gateway_provider','gateway_meta',
     ];
@@ -79,10 +81,13 @@ class Order extends Model
 
     /** @var array<string,string> */
     protected $casts = [
-        'price_tzs'     => 'integer',
-        'gateway_meta'  => 'array',
-        'created_at'    => 'datetime',
-        'updated_at'    => 'datetime',
+        'price_tzs'            => 'integer',
+        'base_price_monthly'   => 'integer',
+        'duration_months'      => 'integer',
+        'discount_percentage'  => 'decimal:2',
+        'gateway_meta'         => 'array',
+        'created_at'           => 'datetime',
+        'updated_at'           => 'datetime',
     ];
 
     /** @var array<int,string> */
@@ -288,6 +293,54 @@ class Order extends Model
     public function markCancelled(?string $ref = null, array $meta = []): self
     {
         return $this->setStatus(self::STATUS_CANCELLED, $ref, $meta);
+    }
+
+    // =======================
+    // Pricing Utilities
+    // =======================
+    
+    /**
+     * Calculate discount percentage based on duration
+     */
+    public static function calculateDiscountForDuration(int $months): float
+    {
+        if ($months >= 12) return 20.0;  // 20% off for 12+ months
+        if ($months >= 6)  return 15.0;  // 15% off for 6-11 months
+        if ($months >= 3)  return 10.0;  // 10% off for 3-5 months
+        return 0.0;                       // No discount for 1-2 months
+    }
+    
+    /**
+     * Calculate total price with discount applied
+     */
+    public static function calculateTotalPrice(int $baseMonthly, int $months): int
+    {
+        $discount = self::calculateDiscountForDuration($months);
+        $subtotal = $baseMonthly * $months;
+        $discountAmount = $subtotal * ($discount / 100);
+        return (int) round($subtotal - $discountAmount);
+    }
+    
+    /**
+     * Get formatted duration text (e.g., "3 months", "1 year")
+     */
+    public function getDurationFormatted(): string
+    {
+        $months = $this->duration_months ?? 1;
+        if ($months === 12) return '1 year';
+        if ($months % 12 === 0) return ($months / 12) . ' years';
+        if ($months === 1) return '1 month';
+        return $months . ' months';
+    }
+    
+    /**
+     * Get savings amount (if any)
+     */
+    public function getSavingsAmount(): int
+    {
+        if (!$this->base_price_monthly || !$this->duration_months) return 0;
+        $fullPrice = $this->base_price_monthly * $this->duration_months;
+        return $fullPrice - $this->price_tzs;
     }
 
     // =======================
