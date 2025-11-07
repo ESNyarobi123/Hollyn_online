@@ -1320,135 +1320,71 @@
   </div>
   
   <div class="pricing-grid">
-    @php
-      use Illuminate\Support\Str;
-
-      // Feature parser function (same as plans.blade.php)
-      $GLOBALS['__parseFeaturePairsHome'] = null;
-      $parseFeaturePairs = $GLOBALS['__parseFeaturePairsHome'] = function($raw){
-        if (is_array($raw)) {
-          $isAssoc = array_keys($raw)!==range(0, count($raw)-1);
-          if ($isAssoc) {
-            return collect($raw)->map(function($v,$k){
-              return ['k'=>(string)$k, 'v'=>(string)$v];
-            })->values();
-          }
-          return collect($raw)->filter()->map(function($line){
-            $line = trim((string)$line);
-            if ($line==='') return null;
-            if (Str::contains($line, ':')) {
-              [$k,$v] = array_map('trim', explode(':',$line,2));
-              return ['k'=>$k ?: 'Feature', 'v'=>$v ?: 'Yes'];
-            }
-            return ['k'=>'Feature', 'v'=>$line];
-          })->filter()->values();
-        }
-
-        if (is_string($raw) && Str::startsWith(trim($raw), ['{','['])) {
-          try {
-            $arr = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-            return ($GLOBALS['__parseFeaturePairsHome'] ?? null)
-              ? ($GLOBALS['__parseFeaturePairsHome'])($arr)
-              : null;
-          } catch (\Throwable $__) { /* fallthrough */ }
-        }
-
-        $text = trim((string)$raw);
-        if ($text==='') return collect();
-
-        $lines = preg_split('/\r\n|\r|\n/', $text);
-        return collect($lines)->map(function($line){
-          $line = trim($line);
-          if ($line==='') return null;
-          if (Str::contains($line, ':')) {
-            [$k,$v] = array_map('trim', explode(':',$line,2));
-            return ['k'=>$k ?: 'Feature', 'v'=>$v ?: 'Yes'];
-          }
-          return ['k'=>'Feature', 'v'=>$line];
-        })->filter()->values();
-      };
-
-      // Take only top 3 plans for home page
-      $homePlans = $plans->take(3);
-    @endphp
-
-    @if($homePlans->isEmpty())
-      <!-- Fallback if no plans -->
-      <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--gray);">
-        <p>No hosting plans available at the moment. Please check back later.</p>
-        <a href="{{ route('plans') }}" class="btn btn-primary" style="margin-top: 1rem;">View All Plans</a>
+    <div class="pricing-card scroll-reveal">
+      <div class="pricing-header">
+        <h3 class="pricing-title">Starter</h3>
+        <div class="pricing-price">TZS 25,000</div>
+        <div class="pricing-period">per month</div>
       </div>
-    @else
-      @foreach($homePlans as $index => $plan)
-        @php
-          $pairs = $parseFeaturePairs($plan->features ?? []);
-          $preview = $pairs->take(6); // Show 6 features on home page
-          $perLabel = ($plan->period_months ?? 1) > 1 ? '/ '.((int)$plan->period_months).' months' : 'per month';
-          
-          // Mark middle plan as featured if we have 3 plans
-          $isFeatured = $homePlans->count() === 3 && $index === 1;
-          
-          // Or mark plan as featured if it's specifically the boost plan
-          if ($plan->slug === 'hollyn-boost') {
-            $isFeatured = true;
-          }
-        @endphp
-
-        <div class="pricing-card {{ $isFeatured ? 'featured' : '' }} scroll-reveal" style="animation-delay: {{ $index * 0.1 }}s;">
-          <div class="pricing-header">
-            <h3 class="pricing-title">{{ $plan->name }}</h3>
-            <div class="pricing-price">TZS {{ number_format((int)$plan->price_tzs) }}</div>
-            <div class="pricing-period">{{ $perLabel }}</div>
-          </div>
-          
-          <ul class="pricing-features">
-            @if($preview->isNotEmpty())
-              @foreach($preview as $feature)
-                @php
-                  $label = trim((string)($feature['k'] ?? 'Feature'));
-                  $value = trim((string)($feature['v'] ?? 'Yes'));
-                  
-                  // Smart display for unlimited
-                  if (Str::lower($value) === 'unlimited') {
-                    $display = '∞ Unlimited';
-                  } else {
-                    $display = $value;
-                  }
-                  
-                  // Combine label and value for clean display
-                  if ($label === 'Feature') {
-                    $text = $display;
-                  } else {
-                    $text = $label . ': ' . $display;
-                  }
-                @endphp
-                <li>{{ $text }}</li>
-              @endforeach
-            @else
-              <li>SSD Storage</li>
-              <li>Free SSL Certificate</li>
-              <li>cPanel Access</li>
-              <li>Email Accounts</li>
-              <li>24/7 Support</li>
-            @endif
-          </ul>
-          
-          <a href="{{ route('checkout.show', $plan) }}" class="btn {{ $isFeatured ? 'btn-success' : 'btn-primary' }}" style="width: 100%; justify-content: center;">
-            {{ $isFeatured ? 'Most Popular' : 'Choose Plan' }}
-          </a>
-        </div>
-      @endforeach
-    @endif
-  </div>
-
-  <!-- View All Plans CTA -->
-  <div style="text-align: center; margin-top: 3rem;">
-    <a href="{{ route('plans') }}" class="btn btn-primary">
-      <span>View All Plans</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </a>
+      
+      <ul class="pricing-features">
+        <li>1 Website</li>
+        <li>10GB SSD Storage</li>
+        <li>Unlimited Bandwidth</li>
+        <li>Free SSL Certificate</li>
+        <li>cPanel Access</li>
+        <li>Email Support</li>
+      </ul>
+      
+      <a href="{{ route('plans') }}" class="btn btn-primary" style="width: 100%; justify-content: center;">
+        Choose Plan
+      </a>
+    </div>
+    
+    <div class="pricing-card featured scroll-reveal">
+      <div class="pricing-header">
+        <h3 class="pricing-title">Professional</h3>
+        <div class="pricing-price">TZS 50,000</div>
+        <div class="pricing-period">per month</div>
+      </div>
+      
+      <ul class="pricing-features">
+        <li>5 Websites</li>
+        <li>50GB SSD Storage</li>
+        <li>Unlimited Bandwidth</li>
+        <li>Free SSL Certificate</li>
+        <li>cPanel Access</li>
+        <li>Priority Support</li>
+        <li>Daily Backups</li>
+      </ul>
+      
+      <a href="{{ route('plans') }}" class="btn btn-success" style="width: 100%; justify-content: center;">
+        Most Popular
+      </a>
+    </div>
+    
+    <div class="pricing-card scroll-reveal">
+      <div class="pricing-header">
+        <h3 class="pricing-title">Business</h3>
+        <div class="pricing-price">TZS 100,000</div>
+        <div class="pricing-period">per month</div>
+      </div>
+      
+      <ul class="pricing-features">
+        <li>Unlimited Websites</li>
+        <li>100GB SSD Storage</li>
+        <li>Unlimited Bandwidth</li>
+        <li>Free SSL Certificate</li>
+        <li>cPanel Access</li>
+        <li>24/7 Phone Support</li>
+        <li>Daily Backups</li>
+        <li>Advanced Security</li>
+      </ul>
+      
+      <a href="{{ route('plans') }}" class="btn btn-primary" style="width: 100%; justify-content: center;">
+        Choose Plan
+      </a>
+    </div>
   </div>
 </section>
 

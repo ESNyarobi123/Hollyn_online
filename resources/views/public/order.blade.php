@@ -57,22 +57,10 @@
         <span class="text-gray-600">Plan:</span>
         <span class="font-semibold">{{ $order->plan->name }}</span>
       </div>
-      @if($order->duration_months)
-      <div class="flex justify-between">
-        <span class="text-gray-600">Duration:</span>
-        <span class="font-semibold">{{ $order->getDurationFormatted() }}</span>
-      </div>
-      @endif
       <div class="flex justify-between">
         <span class="text-gray-600">Amount:</span>
         <span class="font-semibold">TZS {{ number_format($order->price_tzs) }}</span>
       </div>
-      @if($order->discount_percentage > 0)
-      <div class="flex justify-between text-emerald-600">
-        <span class="font-medium">Discount Applied:</span>
-        <span class="font-semibold">{{ $order->discount_percentage }}% (Save TZS {{ number_format($order->getSavingsAmount()) }})</span>
-      </div>
-      @endif
       @if($order->domain)
       <div class="flex justify-between">
         <span class="text-gray-600">Domain:</span>
