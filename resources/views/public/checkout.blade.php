@@ -1,210 +1,315 @@
 @extends('layouts.app')
-@section('title', 'Checkout')
+@section('title', 'Checkout - ' . ($plan->name ?? 'Hosting Plan'))
 
 @section('content')
-<div class="max-w-2xl mx-auto px-4 py-6">
-  {{-- Alerts --}}
-  @if (session('status'))
-    <div class="mb-4 rounded-2xl border border-green-200 bg-green-50 text-green-800 px-4 py-3">
-      {{ session('status') }}
-    </div>
-  @endif
-
-  @if ($errors->any())
-    <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 text-red-800 px-4 py-3">
-      <strong>Angalia makosa yafuatayo:</strong>
-      <ul class="list-disc list-inside mt-2 text-sm">
-        @foreach ($errors->all() as $err)
-          <li>{{ $err }}</li>
-        @endforeach
-      </ul>
-    </div>
-  @endif
-
-  {{-- Step header --}}
-  <div class="mb-5 flex items-center gap-3 text-sm">
-    <div class="flex items-center gap-2">
-      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 font-semibold">1</span>
-      <span>Maelezo yako</span>
-    </div>
-    <span class="text-brand-slate/50">—</span>
-    <div class="flex items-center gap-2 opacity-70">
-      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-gray-700 font-semibold">2</span>
-      <span>Malipo</span>
-    </div>
-  </div>
-
-  {{-- Plan summary --}}
-  <div class="mb-5 rounded-2xl border border-brand-cream bg-white/70 backdrop-blur px-4 py-3">
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <h2 class="text-lg font-semibold">{{ $plan->name ?? 'Plan' }}</h2>
-        <p class="text-xs text-brand-slate/80 mt-0.5">Utalipiwa kwa njia ya simu (STK/USSD push).</p>
-      </div>
-      <div class="text-right">
-        <div class="text-sm text-brand-slate">Pay</div>
-        <div class="text-2xl font-bold">
-          TZS {{ number_format((int)($plan->price_tzs ?? 0)) }}
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 py-12" x-data="checkoutCalculator({{ $plan->price_tzs ?? 0 }})">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Header -->
+        <div class="mb-10 text-center">
+            <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Secure Checkout</h1>
+            <p class="mt-2 text-slate-600 dark:text-slate-400">Complete your order to get started instantly.</p>
         </div>
-      </div>
-    </div>
-  </div>
 
-  {{-- Smart checkout form --}}
-  <form method="POST" action="{{ route('checkout.create') }}" id="checkoutForm" class="space-y-5">
-    @csrf
-    <input type="hidden" name="plan_id" value="{{ $plan->id ?? '' }}">
+        <div class="grid lg:grid-cols-3 gap-8">
+            
+            <!-- Main Form Column -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Alerts -->
+                @if (session('status'))
+                    <div class="rounded-2xl border border-green-200 bg-green-50 text-green-800 px-4 py-3 flex items-center gap-3">
+                        <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        {{ session('status') }}
+                    </div>
+                @endif
 
-    {{-- Full Name --}}
-    <div>
-      <label for="customer_name" class="block text-sm mb-1">Full Name</label>
-      <div class="relative">
-        <input
-          id="customer_name"
-          name="customer_name"
-          value="{{ old('customer_name') }}"
-          required
-          autocomplete="name"
-          class="peer w-full rounded-2xl border border-brand-cream px-3 py-2 focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-        >
-        <span class="pointer-events-none absolute right-3 top-2.5 hidden text-emerald-600 peer-[&:not(:placeholder-shown)]:block">✓</span>
-      </div>
-      @error('customer_name')
-        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-      @enderror
-    </div>
+                @if ($errors->any())
+                    <div class="rounded-2xl border border-red-200 bg-red-50 text-red-800 px-4 py-3">
+                        <div class="flex items-center gap-3 mb-2">
+                            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <strong>Please correct the following errors:</strong>
+                        </div>
+                        <ul class="list-disc list-inside text-sm ml-8">
+                            @foreach ($errors->all() as $err)
+                                <li>{{ $err }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
-    <div class="grid sm:grid-cols-2 gap-4">
-      {{-- Email --}}
-      <div>
-        <label for="customer_email" class="block text-sm mb-1">Email</label>
-        <div class="relative">
-          <input
-            id="customer_email"
-            type="email"
-            name="customer_email"
-            value="{{ old('customer_email') }}"
-            required
-            autocomplete="email"
-            class="peer w-full rounded-2xl border border-brand-cream px-3 py-2 focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-          >
-          <span class="pointer-events-none absolute right-3 top-2.5 hidden text-emerald-600 peer-[&:not(:placeholder-shown)]:block">✓</span>
+                <form method="POST" action="{{ route('checkout.create') }}" id="checkoutForm" class="space-y-8">
+                    @csrf
+                    <input type="hidden" name="plan_id" value="{{ $plan->id ?? '' }}">
+                    <input type="hidden" name="duration_months" :value="duration">
+
+                    <!-- Billing Cycle Selector -->
+                    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold">1</span>
+                            Choose Billing Cycle
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Monthly -->
+                            <label class="relative flex cursor-pointer rounded-2xl border p-4 shadow-sm focus:outline-none transition-all"
+                                :class="duration === 1 ? 'border-violet-600 ring-1 ring-violet-600 bg-violet-50/50 dark:bg-violet-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'">
+                                <input type="radio" name="billing_cycle" value="1" class="sr-only" @click="setDuration(1)">
+                                <span class="flex flex-1">
+                                    <span class="flex flex-col">
+                                        <span class="block text-sm font-medium text-slate-900 dark:text-white">Monthly</span>
+                                        <span class="mt-1 flex items-center text-sm text-slate-500 dark:text-slate-400">Pay monthly, cancel anytime</span>
+                                        <span class="mt-6 text-sm font-semibold text-slate-900 dark:text-white" x-text="formatMoney(basePrice)"></span>
+                                    </span>
+                                </span>
+                                <svg class="h-5 w-5 text-violet-600" viewBox="0 0 20 20" fill="currentColor" x-show="duration === 1">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </label>
+
+                            <!-- Quarterly -->
+                            <label class="relative flex cursor-pointer rounded-2xl border p-4 shadow-sm focus:outline-none transition-all"
+                                :class="duration === 3 ? 'border-violet-600 ring-1 ring-violet-600 bg-violet-50/50 dark:bg-violet-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'">
+                                <input type="radio" name="billing_cycle" value="3" class="sr-only" @click="setDuration(3)">
+                                <span class="flex flex-1">
+                                    <span class="flex flex-col">
+                                        <span class="block text-sm font-medium text-slate-900 dark:text-white">Quarterly</span>
+                                        <span class="mt-1 flex items-center text-sm text-slate-500 dark:text-slate-400">
+                                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Save 10%</span>
+                                        </span>
+                                        <span class="mt-6 text-sm font-semibold text-slate-900 dark:text-white" x-text="formatMoney(calculateTotal(3))"></span>
+                                    </span>
+                                </span>
+                                <svg class="h-5 w-5 text-violet-600" viewBox="0 0 20 20" fill="currentColor" x-show="duration === 3">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </label>
+
+                            <!-- Semi-Annual -->
+                            <label class="relative flex cursor-pointer rounded-2xl border p-4 shadow-sm focus:outline-none transition-all"
+                                :class="duration === 6 ? 'border-violet-600 ring-1 ring-violet-600 bg-violet-50/50 dark:bg-violet-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'">
+                                <input type="radio" name="billing_cycle" value="6" class="sr-only" @click="setDuration(6)">
+                                <span class="flex flex-1">
+                                    <span class="flex flex-col">
+                                        <span class="block text-sm font-medium text-slate-900 dark:text-white">Semi-Annual</span>
+                                        <span class="mt-1 flex items-center text-sm text-slate-500 dark:text-slate-400">
+                                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Save 15%</span>
+                                        </span>
+                                        <span class="mt-6 text-sm font-semibold text-slate-900 dark:text-white" x-text="formatMoney(calculateTotal(6))"></span>
+                                    </span>
+                                </span>
+                                <svg class="h-5 w-5 text-violet-600" viewBox="0 0 20 20" fill="currentColor" x-show="duration === 6">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </label>
+
+                            <!-- Annual -->
+                            <label class="relative flex cursor-pointer rounded-2xl border p-4 shadow-sm focus:outline-none transition-all"
+                                :class="duration === 12 ? 'border-violet-600 ring-1 ring-violet-600 bg-violet-50/50 dark:bg-violet-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-violet-300 dark:hover:border-violet-700'">
+                                <input type="radio" name="billing_cycle" value="12" class="sr-only" @click="setDuration(12)">
+                                <span class="flex flex-1">
+                                    <span class="flex flex-col">
+                                        <span class="block text-sm font-medium text-slate-900 dark:text-white">Annual</span>
+                                        <span class="mt-1 flex items-center text-sm text-slate-500 dark:text-slate-400">
+                                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Best Value (20% Off)</span>
+                                        </span>
+                                        <span class="mt-6 text-sm font-semibold text-slate-900 dark:text-white" x-text="formatMoney(calculateTotal(12))"></span>
+                                    </span>
+                                </span>
+                                <svg class="h-5 w-5 text-violet-600" viewBox="0 0 20 20" fill="currentColor" x-show="duration === 12">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Personal Details -->
+                    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+                        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-violet-100 text-violet-600 text-xs font-bold">2</span>
+                            Account Details
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label for="customer_name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
+                                <input id="customer_name" name="customer_name" value="{{ old('customer_name') }}" required autocomplete="name"
+                                    class="w-full rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-800 focus:border-violet-500 focus:ring-violet-500 transition-colors"
+                                    placeholder="John Doe">
+                            </div>
+
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="customer_email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
+                                    <input id="customer_email" type="email" name="customer_email" value="{{ old('customer_email') }}" required autocomplete="email"
+                                        class="w-full rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-800 focus:border-violet-500 focus:ring-violet-500 transition-colors"
+                                        placeholder="john@example.com">
+                                </div>
+                                <div>
+                                    <label for="customer_phone" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number (TZ)</label>
+                                    <div class="relative">
+                                        <input id="customer_phone" name="customer_phone" value="{{ old('customer_phone') }}" required inputmode="tel"
+                                            class="w-full rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-800 focus:border-violet-500 focus:ring-violet-500 transition-colors pr-24"
+                                            placeholder="07xxxxxxxx">
+                                        <div id="providerPill" class="absolute right-3 top-1/2 -translate-y-1/2 hidden text-xs font-medium px-2 py-0.5 rounded-full"></div>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-500">Used for mobile money payment (M-Pesa, Tigo, Airtel)</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="domain" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Domain Name (Optional)</label>
+                                <input id="domain" name="domain" value="{{ old('domain') }}"
+                                    class="w-full rounded-xl border-slate-200 dark:border-slate-700 dark:bg-slate-800 focus:border-violet-500 focus:ring-violet-500 transition-colors"
+                                    placeholder="example.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields for JS logic -->
+                    <input type="hidden" name="buyer_name" id="buyer_name">
+                    <input type="hidden" name="buyer_email" id="buyer_email">
+                    <input type="hidden" name="buyer_phone" id="buyer_phone">
+
+                    <button type="submit" id="payBtn"
+                        class="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-lg py-4 shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+                        <span>Complete Order</span>
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    </button>
+                    
+                    <p class="text-center text-xs text-slate-500">
+                        By continuing, you agree to our Terms of Service and Privacy Policy.
+                    </p>
+                </form>
+            </div>
+
+            <!-- Order Summary Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="sticky top-24">
+                    <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 overflow-hidden relative">
+                        <!-- Decorative background blob -->
+                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl"></div>
+
+                        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Order Summary</h3>
+                        
+                        <div class="flex items-center gap-3 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+                            <div class="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 01-2 2v4a2 2 0 012 2h14a2 2 0 012-2v-4a2 2 0 01-2-2m-2-4h.01M17 16h.01"/></svg>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-slate-900 dark:text-white">{{ $plan->name }}</div>
+                                <div class="text-sm text-slate-500">Web Hosting</div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 text-sm mb-6">
+                            <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                                <span>Duration</span>
+                                <span class="font-medium text-slate-900 dark:text-white" x-text="duration + ' Month(s)'"></span>
+                            </div>
+                            <div class="flex justify-between text-slate-600 dark:text-slate-400">
+                                <span>Base Price</span>
+                                <span class="font-medium text-slate-900 dark:text-white" x-text="formatMoney(basePrice) + '/mo'"></span>
+                            </div>
+                            <div class="flex justify-between text-green-600 dark:text-green-400" x-show="discountAmount > 0">
+                                <span>Discount</span>
+                                <span class="font-medium" x-text="'-' + formatMoney(discountAmount)"></span>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100 dark:border-slate-800">
+                            <div class="flex justify-between items-end">
+                                <span class="text-slate-600 dark:text-slate-400 font-medium">Total</span>
+                                <span class="text-2xl font-bold text-slate-900 dark:text-white" x-text="formatMoney(totalPrice)"></span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2 text-right">Includes all taxes & fees</p>
+                        </div>
+                    </div>
+
+                    <!-- Trust Badges -->
+                    <div class="mt-6 grid grid-cols-3 gap-4 text-center">
+                        <div class="flex flex-col items-center gap-1">
+                            <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Secure</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Instant</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            <svg class="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Support</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        @error('customer_email')
-          <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
-      </div>
-
-      {{-- Phone --}}
-      <div>
-        <label for="customer_phone" class="block text-sm mb-1">Simu (TZ)</label>
-        <div class="relative">
-          <input
-            id="customer_phone"
-            name="customer_phone"
-            value="{{ old('customer_phone') }}"
-            required
-            inputmode="tel"
-            pattern="^(?:0[67]\d{8}|(?:\+?255|00255)[67]\d{8})$"
-            title="Tumia 07xxxxxxxx / 06xxxxxxxx au +2557xxxxxxxx / 2557xxxxxxxx / 002557xxxxxxxx"
-            placeholder="07xxxxxxxx au +2557xxxxxxxx"
-            class="peer w-full rounded-2xl border border-brand-cream px-3 py-2 pr-28 focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-          >
-          {{-- Provider pill (auto detect) --}}
-          <span id="providerPill" class="absolute right-2 top-1/2 -translate-y-1/2 hidden items-center gap-1 rounded-full border px-2 py-0.5 text-xs"></span>
-        </div>
-        @error('customer_phone')
-          <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
-        <p id="phoneHint" class="mt-1 text-xs text-brand-slate">
-          Inakubali: 07/06…, +255…, 255…, 00255… (mfano: 0765XXXXXX au +255712XXXXXX).
-        </p>
-      </div>
     </div>
-
-    {{-- Domain (optional) --}}
-    <div>
-      <label for="domain" class="block text-sm mb-1">Domain (hiari)</label>
-      <input
-        id="domain"
-        name="domain"
-        value="{{ old('domain') }}"
-        placeholder="example.tz"
-        class="w-full rounded-2xl border border-brand-cream px-3 py-2 focus:border-brand-emerald focus:ring-2 focus:ring-brand-emerald/20"
-      >
-      @error('domain')
-        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-      @enderror
-    </div>
-
-    {{-- Hidden fields expected by gateway/client --}}
-    <input type="hidden" name="buyer_name"  id="buyer_name">
-    <input type="hidden" name="buyer_email" id="buyer_email">
-    <input type="hidden" name="buyer_phone" id="buyer_phone">
-    {{-- Optional provider hint to backend --}}
-    <input type="hidden" name="provider" id="provider_hint">
-
-    {{-- Help bar --}}
-    <div class="flex items-center justify-between rounded-2xl border border-brand-cream bg-white/70 px-4 py-3">
-      <div class="text-xs text-brand-slate">
-        <span class="inline-flex items-center gap-1">
-          {{-- lock icon --}}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="-mt-0.5">
-            <path d="M7 10V7a5 5 0 1110 0v3M5 10h14v9a2 2 0 01-2 2H7a2 2 0 01-2-2v-9z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          Malipo salama: utapokea STK/USSD push kwenye simu yako.
-        </span>
-      </div>
-      <a href="https://youtu.be/O8B2KxNAAGo" target="_blank" class="text-xs underline">Tazama jinsi inavyofanya kazi</a>
-    </div>
-
-    {{-- Submit --}}
-    <button type="submit" id="payBtn"
-      class="btn w-full rounded-2xl bg-gradient-to-r from-amber-300 to-yellow-400 text-black font-semibold py-3 shadow-md hover:shadow-lg active:scale-[.99] transition">
-      <span class="inline-flex items-center gap-2">
-        {{-- wand icon --}}
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 20l8-8M14 6l4 4M14 6l2-4m0 0l2 4m-2-4v6" stroke="#111827" stroke-width="1.6" stroke-linecap="round"/>
-        </svg>
-        Lipa Sasa na ZenoPay
-      </span>
-    </button>
-
-    <p class="text-xs text-center text-brand-slate">
-      Kwa kubofya malipo unakubali <a href="#" class="underline">Terms</a> na <a href="#" class="underline">Privacy</a>.
-    </p>
-  </form>
 </div>
 
-{{-- Smart helpers (UX): phone hint, auto provider, buyer_* mirror, 255 msisdn, prevent double submit --}}
 <script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('checkoutCalculator', (initialBasePrice) => ({
+        duration: 1,
+        basePrice: initialBasePrice,
+        
+        get totalPrice() {
+            return this.calculateTotal(this.duration);
+        },
+
+        get discountAmount() {
+            const subtotal = this.basePrice * this.duration;
+            return subtotal - this.totalPrice;
+        },
+
+        setDuration(months) {
+            this.duration = months;
+        },
+
+        calculateTotal(months) {
+            let discount = 0;
+            if (months >= 3 && months < 6) discount = 0.10;
+            else if (months >= 6 && months < 12) discount = 0.15;
+            else if (months >= 12) discount = 0.20;
+
+            const subtotal = this.basePrice * months;
+            return subtotal * (1 - discount);
+        },
+
+        formatMoney(amount) {
+            return new Intl.NumberFormat('en-TZ', {
+                style: 'currency',
+                currency: 'TZS',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+    }));
+});
+
+// Phone number logic (Vanilla JS for simplicity with existing script)
 (function () {
+  const phnI  = document.getElementById('customer_phone');
+  const pill  = document.getElementById('providerPill');
   const form  = document.getElementById('checkoutForm');
   const btn   = document.getElementById('payBtn');
-  const nameI = document.getElementById('customer_name');
-  const mailI = document.getElementById('customer_email');
-  const phnI  = document.getElementById('customer_phone');
-  const hint  = document.getElementById('phoneHint');
-
+  
+  // Mirror fields
   const buyerName  = document.getElementById('buyer_name');
   const buyerEmail = document.getElementById('buyer_email');
   const buyerPhone = document.getElementById('buyer_phone');
-  const providerEl = document.getElementById('provider_hint');
-  const pill       = document.getElementById('providerPill');
+  const nameI = document.getElementById('customer_name');
+  const mailI = document.getElementById('customer_email');
 
-  if (!form) return;
-
-  // Detect provider from msisdn (2557/2556…) or local 07/06
   function detectProvider(msisdn255) {
-    // msisdn255 expected "2557xxxxxxxx"
     const p3 = msisdn255?.slice(3, 6);
-    const vod = ['074','075','076']; // Vodacom (M-PESA)
-    const air = ['078','079'];       // Airtel Money
-    const tgl = ['062','063','065','066','067','068','069','071','073','077']; // Tigo-like
+    const vod = ['074','075','076']; 
+    const air = ['078','079'];       
+    const tgl = ['062','063','065','066','067','068','069','071','073','077']; 
     if (vod.includes(p3)) return 'M-PESA';
     if (air.includes(p3)) return 'AIRTEL-MONEY';
     if (tgl.includes(p3)) return 'TIGO-PESA';
-    // fallback by p2
+    
     const p2 = msisdn255?.slice(3,5);
     if (['71','74','75','76'].includes(p2)) return 'M-PESA';
     if (['78','79'].includes(p2))           return 'AIRTEL-MONEY';
@@ -212,7 +317,6 @@
     return '';
   }
 
-  // Convert local formats → 255…
   function toMsisdn255(raw) {
     if (!raw) return '';
     raw = raw.trim();
@@ -225,61 +329,38 @@
     return '';
   }
 
-  function stylePill(provider) {
-    if (!pill) return;
-    if (!provider) { pill.classList.add('hidden'); return; }
-    pill.classList.remove('hidden');
-    pill.textContent = provider.replace('-', ' ');
-    pill.className = 'absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs';
-    if (provider === 'M-PESA')       pill.classList.add('border-emerald-200','bg-emerald-50','text-emerald-700');
-    else if (provider === 'TIGO-PESA') pill.classList.add('border-sky-200','bg-sky-50','text-sky-700');
-    else if (provider === 'AIRTEL-MONEY') pill.classList.add('border-rose-200','bg-rose-50','text-rose-700');
-  }
-
-  // Live hint + provider
-  function refreshPhoneUX() {
-    const raw = phnI?.value || '';
-    const ok  = /^(?:0[67]\d{8}|(?:\+?255|00255)[67]\d{8})$/.test(raw);
-    if (ok) {
-      hint.textContent = 'Utapokea STK/USSD push kwenye hii namba.';
-      hint.className = 'mt-1 text-xs text-emerald-700';
-    } else {
-      const digits = raw.replace(/\D+/g, '');
-      if (/^0[67]\d{0,9}$/.test(digits)) {
-        hint.textContent = `Umeandika tarakimu ${digits.length}. Namba ya local inahitaji 10 (mfano 07xxxxxxxx).`;
+  function updateProvider() {
+      if (!phnI) return;
+      const raw = phnI.value;
+      const msisdn = toMsisdn255(raw);
+      const prov = msisdn ? detectProvider(msisdn) : '';
+      
+      if (prov) {
+          pill.classList.remove('hidden');
+          pill.textContent = prov.replace('-', ' ');
+          pill.className = 'absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-0.5 rounded-full transition-colors';
+          
+          if (prov === 'M-PESA') pill.classList.add('bg-green-100', 'text-green-700');
+          else if (prov === 'TIGO-PESA') pill.classList.add('bg-blue-100', 'text-blue-700');
+          else if (prov === 'AIRTEL-MONEY') pill.classList.add('bg-red-100', 'text-red-700');
       } else {
-        hint.textContent = 'Tumia 07/06xxxxxxxx au +255/255/00255 ikifuatiwa na 7/6 na tarakimu 8.';
+          pill.classList.add('hidden');
       }
-      hint.className = 'mt-1 text-xs text-red-600';
-    }
-
-    const msisdn = toMsisdn255(raw);
-    const prov   = msisdn ? detectProvider(msisdn) : '';
-    stylePill(prov);
   }
 
-  phnI?.addEventListener('input', refreshPhoneUX);
-  refreshPhoneUX();
+  phnI?.addEventListener('input', updateProvider);
 
-  // Mirror buyer_* and provider on submit
-  form.addEventListener('submit', function () {
-    if (buyerName)  buyerName.value  = (nameI?.value || '').trim();
-    if (buyerEmail) buyerEmail.value = (mailI?.value || '').trim();
-    if (buyerPhone) buyerPhone.value = toMsisdn255(phnI?.value || '');
-    if (providerEl) providerEl.value = detectProvider(buyerPhone.value) || '';
+  form?.addEventListener('submit', function() {
+      if (buyerName)  buyerName.value  = (nameI?.value || '').trim();
+      if (buyerEmail) buyerEmail.value = (mailI?.value || '').trim();
+      if (buyerPhone) buyerPhone.value = toMsisdn255(phnI?.value || '');
 
-    // Loading state
-    if (btn) {
-      btn.disabled = true;
-      btn.style.opacity = .85;
-      btn.innerHTML = '<span class="inline-flex items-center gap-2">'+
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="animate-spin" aria-hidden="true">'+
-          '<circle cx="12" cy="12" r="9" stroke="#111827" stroke-width="2" stroke-dasharray="56" stroke-linecap="round"></circle>'+
-        '</svg>'+
-        'Tunaandaa malipo…'+
-      '</span>';
-    }
-  }, { once: true });
+      if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+      }
+  });
+
 })();
 </script>
 @endsection
