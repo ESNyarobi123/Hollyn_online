@@ -249,6 +249,16 @@ Route::middleware(['auth', IsAdmin::class])
         Route::post('services/{service}/activate', [AdminService::class, 'activate'])
             ->whereNumber('service')
             ->name('services.activate');
+
+        // Database Migration Helper
+        Route::get('/migrate-db', function () {
+            try {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                return 'Migrations run successfully:<br><pre>' . \Illuminate\Support\Facades\Artisan::output() . '</pre>';
+            } catch (\Throwable $e) {
+                return 'Migration failed: ' . $e->getMessage();
+            }
+        })->name('migrate-db');
     });
 
 // Optional fallback (uncomment to enable)
