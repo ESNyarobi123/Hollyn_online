@@ -1,231 +1,223 @@
 @extends('layouts.app')
+@section('title', 'Order Status #' . $order->id)
+
 @section('content')
-<div class="max-w-2xl mx-auto">
-  <div class="card">
-    <h2 class="heading mb-4">Order Summary #{{ $order->id }}</h2>
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 flex items-center justify-center" 
+     x-data="orderStatus({{ $order->id }}, '{{ $order->status }}')">
     
-    <!-- Status Display -->
-    <div class="mb-4 p-4 rounded-lg" id="status-container"
-         @if($order->status === 'pending')
-           style="background-color: #FEF3C7; border: 2px solid #F59E0B;"
-         @elseif(in_array($order->status, ['paid','active','complete','succeeded']))
-           style="background-color: #D1FAE5; border: 2px solid #10B981;"
-         @elseif(in_array($order->status, ['failed','cancelled']))
-           style="background-color: #FEE2E2; border: 2px solid #EF4444;"
-         @else
-           style="background-color: #F3F4F6; border: 2px solid #9CA3AF;"
-         @endif
-    >
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-600">Payment Status</p>
-          <p class="text-xl font-bold" id="order-status">
-            {{ ucfirst($order->status) }}
-          </p>
+    <div class="max-w-xl w-full mx-auto px-4 sm:px-6">
+        
+        <!-- Main Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+            
+            <!-- Top Decorative Line -->
+            <div class="h-2 w-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-indigo-500"></div>
+
+            <div class="p-8 text-center">
+                
+                <!-- Status Icons & Animation -->
+                <div class="mb-6 flex justify-center">
+                    
+                    <!-- Pending / Waiting -->
+                    <template x-if="status === 'pending'">
+                        <div class="relative">
+                            <div class="w-24 h-24 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center relative z-10">
+                                <svg class="w-12 h-12 text-amber-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="absolute inset-0 bg-amber-400/20 rounded-full animate-ping"></div>
+                        </div>
+                    </template>
+
+                    <!-- Paid / Success -->
+                    <template x-if="isPaid">
+                        <div class="w-24 h-24 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center animate-[bounce_1s_ease-in-out_1]">
+                            <svg class="w-12 h-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                    </template>
+
+                    <!-- Failed -->
+                    <template x-if="isFailed">
+                        <div class="w-24 h-24 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                            <svg class="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Status Text -->
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-2" x-text="statusTitle"></h1>
+                <p class="text-slate-600 dark:text-slate-400 mb-8" x-html="statusMessage"></p>
+
+                <!-- Order Info Box -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 mb-8 text-left border border-slate-100 dark:border-slate-700">
+                    <div class="flex justify-between items-center mb-4 pb-4 border-b border-slate-200 dark:border-slate-700">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Order ID</span>
+                        <span class="font-mono font-medium text-slate-900 dark:text-white">#{{ $order->id }}</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Plan</span>
+                        <span class="font-medium text-slate-900 dark:text-white">{{ $order->plan->name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Amount</span>
+                        <span class="font-bold text-slate-900 dark:text-white">TZS {{ number_format($order->price_tzs) }}</span>
+                    </div>
+                    @if($order->domain)
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Domain</span>
+                        <span class="font-medium text-slate-900 dark:text-white">{{ $order->domain }}</span>
+                    </div>
+                    @endif
+                </div>
+
+                <!-- Actions -->
+                <div class="space-y-3">
+                    <!-- Pending Actions -->
+                    <template x-if="status === 'pending'">
+                        <div class="space-y-3">
+                            <button @click="checkStatus()" :disabled="loading" 
+                                class="w-full py-3.5 px-6 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-lg shadow-violet-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                <svg x-show="loading" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span x-text="loading ? 'Checking...' : 'I Have Paid'"></span>
+                            </button>
+                            <p class="text-xs text-slate-500">
+                                Check your phone for the payment prompt.
+                            </p>
+                        </div>
+                    </template>
+
+                    <!-- Success Actions -->
+                    <template x-if="isPaid">
+                        <div>
+                            <a href="{{ route('dashboard') }}" class="block w-full py-3.5 px-6 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg shadow-green-500/30 transition-all">
+                                Go to Dashboard
+                            </a>
+                        </div>
+                    </template>
+
+                    <!-- Failed Actions -->
+                    <template x-if="isFailed">
+                        <div class="grid grid-cols-2 gap-3">
+                            <a href="{{ route('pay.start', $order->id) }}" class="py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold hover:opacity-90 transition-all">
+                                Try Again
+                            </a>
+                            <a href="{{ route('home') }}" class="py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                                Cancel
+                            </a>
+                        </div>
+                    </template>
+                </div>
+
+            </div>
+            
+            <!-- Progress Bar (for polling) -->
+            <div x-show="status === 'pending'" class="absolute bottom-0 left-0 h-1 bg-violet-500 transition-all duration-[5000ms] ease-linear" :style="'width: ' + progress + '%'"></div>
         </div>
-        <div id="status-icon">
-          @if($order->status === 'pending')
-            <svg class="animate-spin h-8 w-8 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          @elseif(in_array($order->status, ['paid','active','complete','succeeded']))
-            <svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          @elseif(in_array($order->status, ['failed','cancelled']))
-            <svg class="h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          @endif
+
+        <!-- Help Text -->
+        <div class="mt-8 text-center">
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                Need help? <a href="#" class="text-violet-600 hover:underline">Contact Support</a>
+            </p>
         </div>
-      </div>
-      <p class="text-sm mt-2" id="status-message">
-        @if($order->status === 'pending')
-          <span class="text-yellow-800">⏳ Tunasubiri uthibitisho wa malipo...</span>
-        @elseif(in_array($order->status, ['paid','active','complete','succeeded']))
-          <span class="text-green-800">✅ Malipo yamefanikiwa!</span>
-        @elseif(in_array($order->status, ['failed','cancelled']))
-          <span class="text-red-800">❌ Malipo yameshindikana</span>
-        @endif
-      </p>
-    </div>
 
-    <!-- Order Details -->
-    <div class="space-y-3 border-t pt-4">
-      <div class="flex justify-between">
-        <span class="text-gray-600">Plan:</span>
-        <span class="font-semibold">{{ $order->plan->name }}</span>
-      </div>
-      <div class="flex justify-between">
-        <span class="text-gray-600">Amount:</span>
-        <span class="font-semibold">TZS {{ number_format($order->price_tzs) }}</span>
-      </div>
-      @if($order->domain)
-      <div class="flex justify-between">
-        <span class="text-gray-600">Domain:</span>
-        <span class="font-semibold">{{ $order->domain }}</span>
-      </div>
-      @endif
-      @if($order->payment_ref)
-      <div class="flex justify-between">
-        <span class="text-gray-600">Payment Reference:</span>
-        <span class="font-mono text-sm">{{ $order->payment_ref }}</span>
-      </div>
-      @endif
     </div>
-
-    <!-- Service Info -->
-    @if($order->service)
-      <div class="mt-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-        <h3 class="font-semibold mb-2 text-blue-900">🖥️ Huduma Yako</h3>
-        <p class="text-sm text-blue-800 mb-2">Status: <span class="font-bold">{{ ucfirst($order->service->status) }}</span></p>
-        @if($order->service->status === 'active' && $order->service->enduser_url)
-          <a class="btn-primary mt-3 inline-block" target="_blank" href="{{ $order->service->enduser_url }}">
-            🚀 Fungua Control Panel
-          </a>
-        @elseif($order->service->status === 'provisioning')
-          <p class="text-sm text-blue-700">⚙️ Tunatengeneza akaunti yako, subiri kidogo...</p>
-        @endif
-      </div>
-    @endif
-
-    <!-- Actions -->
-    <div class="mt-6 flex gap-3">
-      @if($order->status === 'pending')
-        <button onclick="checkStatusNow()" id="check-btn" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition">
-          🔄 Angalia Status Ya Malipo
-        </button>
-      @endif
-      @auth
-        <a href="{{ route('dashboard') }}" class="btn-primary">
-          📊 Dashboard Yangu
-        </a>
-      @endauth
-      <a href="{{ route('home') }}" class="btn-gold">
-        🏠 Rudi Home
-      </a>
-    </div>
-  </div>
 </div>
 
-<!-- Auto-Polling JavaScript -->
-@if($order->status === 'pending')
 <script>
-  (function() {
-    let pollInterval;
-    let pollCount = 0;
-    const maxPolls = 60; // Poll for 5 minutes (60 × 5s = 5min)
-    const pollDelay = 5000; // Check every 5 seconds
-    
-    function updateUI(data) {
-      const statusElement = document.getElementById('order-status');
-      const messageElement = document.getElementById('status-message');
-      const containerElement = document.getElementById('status-container');
-      const iconElement = document.getElementById('status-icon');
-      
-      if (data.is_paid) {
-        // Payment successful!
-        statusElement.textContent = 'PAID ✅';
-        messageElement.innerHTML = '<span class="text-green-800">✅ Malipo yamefanikiwa! Tunapanga huduma yako...</span>';
-        containerElement.style.backgroundColor = '#D1FAE5';
-        containerElement.style.borderColor = '#10B981';
-        iconElement.innerHTML = '<svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-        
-        if (pollInterval) clearInterval(pollInterval);
-        
-        // Reload page after 2 seconds to show service
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-        
-      } else if (data.is_terminal && !data.is_paid) {
-        // Payment failed
-        statusElement.textContent = 'FAILED ❌';
-        messageElement.innerHTML = '<span class="text-red-800">❌ Malipo yameshindikana. Jaribu tena.</span>';
-        containerElement.style.backgroundColor = '#FEE2E2';
-        containerElement.style.borderColor = '#EF4444';
-        iconElement.innerHTML = '<svg class="h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-        
-        if (pollInterval) clearInterval(pollInterval);
-      } else {
-        // Still pending
-        statusElement.textContent = 'PENDING ⏳';
-        messageElement.innerHTML = '<span class="text-yellow-800">⏳ Tunasubiri uthibitisho wa malipo...</span>';
-      }
-    }
-    
-    function checkPaymentStatus() {
-      pollCount++;
-      
-      // Disable check button while checking
-      const btn = document.getElementById('check-btn');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '⏳ Inaangalia...';
-      }
-      
-      fetch('{{ route("pay.status", $order->id) }}', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest'
+document.addEventListener('alpine:init', () => {
+    Alpine.data('orderStatus', (orderId, initialStatus) => ({
+        status: initialStatus,
+        loading: false,
+        pollInterval: null,
+        progress: 0,
+        pollCount: 0,
+        maxPolls: 60, // 5 minutes
+
+        init() {
+            if (this.status === 'pending') {
+                this.startPolling();
+            }
+        },
+
+        get isPaid() {
+            return ['paid', 'active', 'complete', 'succeeded'].includes(this.status);
+        },
+
+        get isFailed() {
+            return ['failed', 'cancelled'].includes(this.status);
+        },
+
+        get statusTitle() {
+            if (this.isPaid) return 'Payment Successful!';
+            if (this.isFailed) return 'Payment Failed';
+            return 'Waiting for Payment';
+        },
+
+        get statusMessage() {
+            if (this.isPaid) return 'Thank you! Your transaction has been completed successfully.<br>We are setting up your service now.';
+            if (this.isFailed) return 'We could not confirm your payment.<br>Please try again or contact support.';
+            return 'Please check your phone and enter your PIN to complete the transaction.<br>This page will update automatically.';
+        },
+
+        startPolling() {
+            this.progress = 0;
+            // Animate progress bar to 100% over 5 seconds
+            setTimeout(() => { this.progress = 100; }, 100);
+
+            this.pollInterval = setInterval(() => {
+                this.checkStatus();
+                
+                // Reset progress bar
+                this.progress = 0;
+                setTimeout(() => { this.progress = 100; }, 100);
+
+                this.pollCount++;
+                if (this.pollCount >= this.maxPolls) {
+                    this.stopPolling();
+                }
+            }, 5000);
+        },
+
+        stopPolling() {
+            if (this.pollInterval) clearInterval(this.pollInterval);
+        },
+
+        async checkStatus() {
+            this.loading = true;
+            try {
+                const res = await fetch(`/pay/${orderId}/status`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await res.json();
+                
+                console.log('Status check:', data);
+
+                if (data.status !== this.status) {
+                    this.status = data.status;
+                    
+                    if (data.is_terminal) {
+                        this.stopPolling();
+                        if (data.is_paid) {
+                            // Optional: Redirect after a delay
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 3000);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Polling error:', e);
+            } finally {
+                this.loading = false;
+            }
         }
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Payment status check #' + pollCount + ':', data);
-        updateUI(data);
-        
-        // Re-enable button
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '🔄 Angalia Status Ya Malipo';
-        }
-        
-        // Stop polling after max attempts
-        if (pollCount >= maxPolls && !data.is_terminal) {
-          if (pollInterval) clearInterval(pollInterval);
-          document.getElementById('status-message').innerHTML = 
-            '<span class="text-yellow-800">⏰ Tumechelewa kupata response. Bofya button ya "Angalia Status" ukagundua.</span>';
-        }
-      })
-      .catch(error => {
-        console.error('Error checking status:', error);
-        
-        // Re-enable button
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '🔄 Angalia Status Ya Malipo';
-        }
-        
-        // Don't stop polling on error, just log it
-        if (pollCount >= maxPolls && pollInterval) {
-          clearInterval(pollInterval);
-        }
-      });
-    }
-    
-    // Manual check function (for button)
-    window.checkStatusNow = function() {
-      console.log('Manual status check triggered');
-      checkPaymentStatus();
-    };
-    
-    // Start polling immediately, then every 5 seconds
-    checkPaymentStatus();
-    pollInterval = setInterval(checkPaymentStatus, pollDelay);
-    
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-      if (pollInterval) clearInterval(pollInterval);
-    });
-  })();
+    }));
+});
 </script>
-@endif
 @endsection
