@@ -162,6 +162,8 @@ class PaymentController extends Controller
                 
                 // Extract status from ZenoPay response - try multiple possible keys
                 $zenoStatus = strtolower((string) (
+                    Arr::get($statusResp, 'data.0.payment_status') ?? 
+                    Arr::get($statusResp, 'data.0.status') ?? 
                     Arr::get($statusResp, 'data.status') ?? 
                     Arr::get($statusResp, 'data.state') ?? 
                     Arr::get($statusResp, 'status') ?? 
@@ -175,7 +177,9 @@ class PaymentController extends Controller
                 // Update order based on ZenoPay status - check more variations
                 if (in_array($zenoStatus, ['paid', 'success', 'successful', 'completed', 'complete', 'active', 'approved'], true)) {
                     $order->status = 'paid';
-                    $order->payment_ref = Arr::get($statusResp, 'data.transaction_id') 
+                    $order->payment_ref = Arr::get($statusResp, 'data.0.transaction_id')
+                        ?? Arr::get($statusResp, 'data.0.reference')
+                        ?? Arr::get($statusResp, 'data.transaction_id') 
                         ?? Arr::get($statusResp, 'transaction_id') 
                         ?? Arr::get($statusResp, 'data.reference')
                         ?? Arr::get($statusResp, 'reference')

@@ -62,15 +62,9 @@ Route::get('/pay/{order}/status', [PaymentController::class, 'pollStatus'])
 
 /* webhook (closure placeholder): log + 200 OK
    NOTE: ongeza exception ya CSRF kwa route hii kwenye VerifyCsrfToken */
-Route::post('/webhooks/zeno', function (Request $request) {
-    Log::info('Zeno webhook hit', [
-        'ip'   => $request->ip(),
-        'body' => $request->all(),
-        'ua'   => $request->userAgent(),
-    ]);
-    // TODO: hapa baadaye tumia PaymentController@webhook na uthibitishe signature
-    return response()->json(['ok' => true]);
-})->name('webhooks.zeno');
+Route::post('/webhooks/zeno', [\App\Http\Controllers\PaymentWebhookController::class, 'handle'])
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]) // Important for webhooks
+    ->name('webhooks.zeno');
 
 /*
 |--------------------------------------------------------------------------
