@@ -53,11 +53,6 @@ class ZenoPayClient
             'Accept'      => 'application/json',
         ];
 
-        return Http::withHeaders($headers)
-            ->timeout(15)
-            ->connectTimeout(8)
-            ->retry(3, 200, fn($e) => true, throw:false);
-        
         $url = $this->base().'/payments/order-status';
         \Illuminate\Support\Facades\Log::info('ZenoPay Status Request', ['url' => $url, 'params' => ['order_id'=>$gatewayOrderId]]);
 
