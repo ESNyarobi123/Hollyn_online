@@ -188,6 +188,12 @@ class PaymentController extends Controller
                     $order->save();
                     
                     \Log::info('Order marked as paid', ['order_id' => $order->id, 'payment_ref' => $order->payment_ref]);
+
+                    // Trigger provisioning if not already done
+                    if (!$order->service && class_exists(\App\Jobs\ProvisionServiceJob::class)) {
+                        \App\Jobs\ProvisionServiceJob::dispatch($order)->onQueue('provisioning');
+                        \Log::info('Provisioning job dispatched via polling', ['order_id' => $order->id]);
+                    }
                     
                     return response()->json([
                         'status' => 'paid',

@@ -206,7 +206,7 @@ document.addEventListener('alpine:init', () => {
                         if (data.is_paid) {
                             // Optional: Redirect after a delay
                             setTimeout(() => {
-                                window.location.reload();
+                                window.location.href = "{{ route('dashboard') }}";
                             }, 3000);
                         }
                     }
